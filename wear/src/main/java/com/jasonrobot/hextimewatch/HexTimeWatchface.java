@@ -20,10 +20,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -99,6 +103,9 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
         private boolean mLowBitAmbient;
         private boolean mBurnInProtection;
 
+        Bitmap backgroundBitmap;
+        Bitmap backgroundBitmapScaled;
+
         private int rawTimezoneOffset;
 
         private int h1;
@@ -129,6 +136,10 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
 
             cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-8"), Locale.US);
             rawTimezoneOffset = cal.getTimeZone().getRawOffset();
+
+            Resources resources = HexTimeWatchface.this.getResources();
+            Drawable backgroundDrawable = resources.getDrawable(R.drawable.watchface);
+            backgroundBitmap = ((BitmapDrawable) backgroundDrawable).getBitmap();
 
             h1Paint = new Paint();
             h1Paint.setARGB(0xFF, 0xDD, 0x20, 0x20);
@@ -195,6 +206,12 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
 
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            if (backgroundBitmapScaled == null
+                    || backgroundBitmapScaled.getWidth() != width
+                    || backgroundBitmapScaled.getHeight() != height) {
+                backgroundBitmapScaled = Bitmap.createScaledBitmap(backgroundBitmap, width, height, true);
+            }
+
             super.onSurfaceChanged(holder, format, width, height);
 
             /*
@@ -229,6 +246,8 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
             int width = bounds.width();
             int height = bounds.height();
 
+            canvas.drawBitmap(backgroundBitmapScaled, 0, 0, null);
+
             h5 = calculateHexTime(5);
 
             h4 = calculateHexTime(4);
@@ -256,17 +275,16 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
             canvas.drawLine(centerX, centerY, h1x, h1y, h1Paint);
 
             canvas.drawText(toHex(h1) + ":" + toHex(h2) + ":" + toHex(h3) + "," + toHex(h4),// + "." + toHex(h5),
-                    centerX, getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog), textPaint);
+                    centerX, (float) (bounds.centerY() - ( 1.5 * getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog))) , textPaint);
 
             canvas.drawText(cal.get(Calendar.HOUR_OF_DAY) + ":" + cal.get(Calendar.MINUTE),
-                    centerX, bounds.height() - getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog), textPaint);
+                    centerX, (float) (bounds.centerY() + ( 1.5 * getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog))), textPaint);
         }
 
         /**
          * Calculate the current hex times
          *
          * @param subdiv which subdivision to calculate. (1 for h1, 2 for h2, etc)
-         *
          * @return whole integer of the time
          */
         private int calculateHexTime(int subdiv) {
