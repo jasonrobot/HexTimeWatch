@@ -33,6 +33,7 @@ import android.view.SurfaceHolder;
 
 import java.lang.ref.WeakReference;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -84,19 +85,27 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
         /* Handler to update the time once a second in interactive mode. */
         private final Handler mUpdateTimeHandler = new EngineHandler(this);
         private Calendar cal;
-        private final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
+        private final BroadcastReceiver timezoneChangedIntentHandler = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                cal.setTimeZone(TimeZone.getDefault());
+                cal.setTimeZone(TimeZone.getTimeZone(intent.getStringExtra("time-zone")));
                 invalidate();
             }
         };
-        private boolean mRegisteredTimeZoneReceiver = false;
+        private boolean isTimezoneHandlerRegistered = false;
         private float centerX;
         private float centerY;
         private boolean mAmbient;
         private boolean mLowBitAmbient;
         private boolean mBurnInProtection;
+
+        private int rawTimezoneOffset;
+
+        private int h1;
+        private int h2;
+        private int h3;
+        private int h4;
+        private int h5;
 
         private float h1Length;
         private float h2Length;
@@ -115,16 +124,19 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
+            //for debugging TZ on emulator
+//            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
 
-            cal = Calendar.getInstance();
+            cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-8"), Locale.US);
+            rawTimezoneOffset = cal.getTimeZone().getRawOffset();
 
             h1Paint = new Paint();
             h1Paint.setARGB(0xFF, 0xDD, 0x20, 0x20);
-            h1Paint.setStrokeWidth(15);
+            h1Paint.setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.h1size));
 
             h2Paint = new Paint();
             h2Paint.setARGB(0xFF, 0xDD, 0xDD, 0xDD);
-            h2Paint.setStrokeWidth(15);
+            h2Paint.setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.h2size));
 
             h3Paint = new Paint(h1Paint);
 
@@ -209,7 +221,6 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
 
             // Update the time
             cal.setTimeInMillis(System.currentTimeMillis());
-            cal.setTimeZone(TimeZone.getTimeZone("PST"));
 
             // Constant to help calculate clock hand rotations
             final float TWO_PI = (float) Math.PI * 2f;
@@ -218,37 +229,36 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
             int width = bounds.width();
             int height = bounds.height();
 
-            int h5 = calculateHexTime(5);
+            h5 = calculateHexTime(5);
 
-            int h4 = calculateHexTime(4);
-            float h4rot = SIXTEENTH * (h4 + (h5 / 16f) + 8);
-            System.out.println("h4 " + h4 + ", h5 " + h5 + ", and " + (h5 / 16f));
-            float h4x = (float) (Math.sin(h4rot) * h4Length) + centerX;
-            float h4y = (float) (-Math.cos(h4rot) * h4Length) + centerY;
-            canvas.drawLine(centerX, centerY, h4x, h4y, h4Paint);
+            h4 = calculateHexTime(4);
+//            float h4rot = SIXTEENTH * (h4 + (h5 / 16f) + 8);
+//            float h4x = (float) (Math.sin(h4rot) * h4Length) + centerX;
+//            float h4y = (float) (-Math.cos(h4rot) * h4Length) + centerY;
+//            canvas.drawLine(centerX, centerY, h4x, h4y, h4Paint);
 
-            int h3 = calculateHexTime(3);
-            float h3rot = SIXTEENTH * (h3 + (h4 / 16f) + 8);
+            h3 = calculateHexTime(3);
+            float h3rot = SIXTEENTH * (h3 + (h4 / 16f) + (h5 / 256f) + 8);
             float h3x = (float) (Math.sin(h3rot) * h3Length) + centerX;
             float h3y = (float) (-Math.cos(h3rot) * h3Length) + centerY;
             canvas.drawLine(centerX, centerY, h3x, h3y, h3Paint);
 
-            int h2 = calculateHexTime(2);
-            float h2rot = SIXTEENTH * (h2 + (h3 / 16f) + 8);
+            h2 = calculateHexTime(2);
+            float h2rot = SIXTEENTH * (h2 + (h3 / 16f) + (h4 / 256f) + 8);
             float h2x = (float) (Math.sin(h2rot) * h2Length) + centerX;
             float h2y = (float) (-Math.cos(h2rot) * h2Length) + centerY;
             canvas.drawLine(centerX, centerY, h2x, h2y, h2Paint);
 
-            int h1 = calculateHexTime(1);
-            float h1rot = SIXTEENTH * (h1 + (h2 / 16f) + 8);
+            h1 = calculateHexTime(1);
+            float h1rot = SIXTEENTH * (h1 + (h2 / 16f) + (h3 / 256f) + 8);
             float h1x = (float) (Math.sin(h1rot) * h1Length) + centerX;
             float h1y = (float) (-Math.cos(h1rot) * h1Length) + centerY;
             canvas.drawLine(centerX, centerY, h1x, h1y, h1Paint);
 
-            canvas.drawText(toHex(h1) + ":" + toHex(h2) + ":" + toHex(h3) + "," + toHex(h4) + "." + toHex(h5),
+            canvas.drawText(toHex(h1) + ":" + toHex(h2) + ":" + toHex(h3) + "," + toHex(h4),// + "." + toHex(h5),
                     centerX, getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog), textPaint);
 
-            canvas.drawText(cal.get(Calendar.HOUR) + ":" + cal.get(Calendar.MINUTE),
+            canvas.drawText(cal.get(Calendar.HOUR_OF_DAY) + ":" + cal.get(Calendar.MINUTE),
                     centerX, bounds.height() - getResources().getDimensionPixelSize(R.dimen.digitTextSizeInAnalog), textPaint);
         }
 
@@ -260,7 +270,7 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
          * @return whole integer of the time
          */
         private int calculateHexTime(int subdiv) {
-            long timeInDay = (cal.getTimeInMillis() % 86400000);
+            long timeInDay = (cal.getTimeInMillis() + rawTimezoneOffset) % 86400000;
             return (int) (timeInDay / (86400000 / Math.pow(16, subdiv)) % 16);
         }
 
@@ -276,6 +286,7 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
                 registerReceiver();
                 /* Update time zone in case it changed while we weren't visible. */
                 cal.setTimeZone(TimeZone.getDefault());
+                rawTimezoneOffset = cal.getTimeZone().getRawOffset();
                 invalidate();
             } else {
                 unregisterReceiver();
@@ -292,20 +303,20 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
         }
 
         private void registerReceiver() {
-            if (mRegisteredTimeZoneReceiver) {
+            if (isTimezoneHandlerRegistered) {
                 return;
             }
-            mRegisteredTimeZoneReceiver = true;
+            isTimezoneHandlerRegistered = true;
             IntentFilter filter = new IntentFilter(Intent.ACTION_TIMEZONE_CHANGED);
-            HexTimeWatchface.this.registerReceiver(mTimeZoneReceiver, filter);
+            HexTimeWatchface.this.registerReceiver(timezoneChangedIntentHandler, filter);
         }
 
         private void unregisterReceiver() {
-            if (!mRegisteredTimeZoneReceiver) {
+            if (!isTimezoneHandlerRegistered) {
                 return;
             }
-            mRegisteredTimeZoneReceiver = false;
-            HexTimeWatchface.this.unregisterReceiver(mTimeZoneReceiver);
+            isTimezoneHandlerRegistered = false;
+            HexTimeWatchface.this.unregisterReceiver(timezoneChangedIntentHandler);
         }
 
         /**
