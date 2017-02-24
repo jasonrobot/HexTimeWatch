@@ -15,19 +15,19 @@ I just call these subdivisions h1 h2 h3 h4 h5, or firsts seconds thirds fourths 
 
 It's roughly like this:
 
-1048576 5ths per day
+1048576 5ths per day  
 1 h5 = 0.082 sec = 82.397 ms
 
-65536 4ths per day
+65536 4ths per day  
 1 h4 = 1.318 sec
 
-4096 3rds per day
+4096 3rds per day  
 1 h3 = 21.094 sec
 
-256 2nds
+256 2nds  
 1 h2 = 337.5 sec = ~5.6 minutes
 
-16 1sts
+16 1sts  
 1 h1 = 5400s = 90 minutes
 
 Also, while I was changing things up, I made the "0" of the clock on the bottom, so at midnight all the hands will point straight down instead of straight up. I thought this was cool because now the h1 hand roughly points to where the sun is.
