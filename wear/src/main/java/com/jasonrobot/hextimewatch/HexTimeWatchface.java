@@ -134,8 +134,9 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
             //for debugging TZ on emulator
 //            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
 
-            cal = Calendar.getInstance(TimeZone.getTimeZone("GMT-8"), Locale.US);
-            rawTimezoneOffset = cal.getTimeZone().getRawOffset();
+            cal = Calendar.getInstance(TimeZone.getDefault(), Locale.US);
+            rawTimezoneOffset = cal.getTimeZone().getOffset(cal.getTimeInMillis());
+            System.out.println(rawTimezoneOffset);
 
             Resources resources = HexTimeWatchface.this.getResources();
             Drawable backgroundDrawable = resources.getDrawable(R.drawable.watchface);
@@ -304,7 +305,7 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
                 registerReceiver();
                 /* Update time zone in case it changed while we weren't visible. */
                 cal.setTimeZone(TimeZone.getDefault());
-                rawTimezoneOffset = cal.getTimeZone().getRawOffset();
+                rawTimezoneOffset = cal.getTimeZone().getOffset(cal.getTimeInMillis());
                 invalidate();
             } else {
                 unregisterReceiver();
@@ -314,11 +315,11 @@ public class HexTimeWatchface extends CanvasWatchFaceService {
             updateTimer();
         }
 
-        @Override
-        public void onPeekCardPositionUpdate(Rect rect) {
-            super.onPeekCardPositionUpdate(rect);
-            mPeekCardBounds.set(rect);
-        }
+//        @Override
+//        public void onPeekCardPositionUpdate(Rect rect) {
+//            super.onPeekCardPositionUpdate(rect);
+//            mPeekCardBounds.set(rect);
+//        }
 
         private void registerReceiver() {
             if (isTimezoneHandlerRegistered) {
